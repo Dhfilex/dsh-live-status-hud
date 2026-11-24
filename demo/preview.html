@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>dsh-live-status-hud v0.3.0 思考链 + 俏皮话术预览</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; background: #f8fafc; color: #1e293b;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex; align-items: center; justify-content: center; padding: 24px;
+    }
+    .panel {
+      max-width: 620px; width: 100%; background: #fff;
+      border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px;
+      box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+    }
+    h1 { margin: 0 0 8px; font-size: 20px; color: #203170; }
+    p { margin: 0 0 16px; color: #475569; font-size: 14px; line-height: 1.6; }
+    .btns { display: flex; flex-wrap: wrap; gap: 10px; }
+    button.sim {
+      background: #f1f5f9; color: #1e293b; border: 1px solid #cbd5e1;
+      border-radius: 10px; padding: 8px 13px; cursor: pointer; font-size: 13px; font-weight: 500;
+    }
+    button.sim:hover { background: #e2e8f0; }
+    button.sim.primary { background: #203170; color: #fff; border-color: #203170; }
+    .dshwv-root {
+      position: fixed; right: 18px; bottom: 14px; z-index: 9999;
+      display: flex; flex-direction: column; align-items: flex-end; transition: all 240ms ease;
+    }
+    .dshwv-root.dshwv-left { right: auto; left: 18px; align-items: flex-start; }
+    .dshwv-root.hidden { display: none; }
+    .dshwv-bubble {
+      display: none; margin-bottom: 6px; background: #fff;
+      border: 3px solid #203170; border-radius: 999px; padding: 10px 16px;
+      font-size: 12px; font-weight: 700; color: #203170;
+    }
+    .dshwv-bubble.open { display: block; }
+    .dshwv-img {
+      width: 88px; height: 88px; border-radius: 50%;
+      background: linear-gradient(145deg, #60a5fa, #2563eb); border: 3px solid #203170;
+      display: flex; align-items: center; justify-content: center; font-size: 36px; cursor: pointer;
+    }
+    .mini-companion { position: fixed; right: 18px; bottom: 16px; z-index: 10000; display: none; cursor: pointer; }
+    .mini-companion.visible { display: block; }
+    .mini-companion.left { right: auto; left: 18px; transform: scaleX(-1); }
+    .hud-bubble-wrap {
+      position: fixed; width: 264px; z-index: 10002;
+      transition: left 220ms cubic-bezier(.22,1,.36,1), bottom 220ms cubic-bezier(.22,1,.36,1);
+    }
+    .hud-bubble {
+      background: #fff; border: 3px solid #203170; border-radius: 26px;
+      padding: 10px 14px 11px; box-shadow: 0 8px 20px rgba(32, 49, 112, 0.18); color: #203170;
+    }
+    .hud-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .hud-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+      background: #eff6ff; color: #2563eb;
+    }
+    .hud-dot { width: 6px; height: 6px; border-radius: 50%; background: #2563eb; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.35); opacity: 0.45; } }
+    .hud-meta { font-size: 11px; color: #536ba9; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .hud-headline {
+      width: 100%; background: none; border: none; padding: 0; text-align: left;
+      cursor: pointer; color: #203170; font-size: 13px; font-weight: 700; line-height: 1.4;
+    }
+    .hud-thought {
+      width: 100%; margin-top: 6px; padding: 5px 8px; border-radius: 10px;
+      background: #f1f5ff; border: 1px dashed rgba(83,107,169,0.35);
+      color: #475569; font-size: 11px; line-height: 1.4; text-align: left; cursor: pointer;
+    }
+    .hud-tail { position: relative; height: 18px; }
+    .hud-tail.hidden { display: none; }
+    .hud-tail span { position: absolute; border-radius: 50%; background: #fff; border: 2.5px solid #203170; }
+    .hud-tail .t1 { top: 2px; right: 42px; width: 12px; height: 9px; }
+    .hud-tail .t2 { top: 12px; right: 30px; width: 7px; height: 6px; border-width: 2px; }
+    .hud-bubble-wrap.left .hud-tail .t1 { right: auto; left: 42px; }
+    .hud-bubble-wrap.left .hud-tail .t2 { right: auto; left: 30px; }
+    .hud-drawer {
+      display: none; margin-bottom: 8px; background: #fff;
+      border: 2.5px solid #203170; border-radius: 18px; padding: 10px 12px; font-size: 11.5px;
+    }
+    .hud-drawer.open { display: block; }
+    .tabs { display: flex; gap: 6px; margin-bottom: 8px; }
+    .tab {
+      border-radius: 999px; padding: 2px 8px; font-size: 11px; font-weight: 700; cursor: pointer;
+      border: 1px solid transparent; background: transparent; color: #64748b;
+    }
+    .tab.active { background: #eff6ff; color: #203170; border-color: #bfdbfe; }
+    .thought-box {
+      max-height: 130px; overflow-y: auto; background: #f8fafc; border-radius: 10px;
+      padding: 8px; color: #334155; line-height: 1.5; white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <h1>dsh-live-status-hud v0.3.0 思考链 + 俏皮话术预览</h1>
+    <p>新版会在气泡里用可爱俏皮的语气播报进度，并实时展示模型的<strong>💭 思考链预览</strong>；点击气泡还能切换「🧠 思考链」和「🛠️ 干活记录」双标签查看完整过程。</p>
+    <div class="btns">
+      <button class="sim primary" onclick="runDemo()">▶ 播放思考链 + 工具调用模拟</button>
+      <button class="sim" onclick="toggleBalance()">💰 切换挂件自带气泡</button>
+      <button class="sim" onclick="toggleWidgetPresence()">🐋 切换有/无挂件（内置小鲸灵）</button>
+      <button class="sim" onclick="toggleLeft()">⇄ 切换左右边</button>
+    </div>
+  </div>
+
+  <div id="whaleRoot" class="dshwv-root">
+    <div id="balanceBubble" class="dshwv-bubble">老大~ 你的 DS 余额不足 ¥5 啦~</div>
+    <div id="whaleSprite" class="dshwv-img" onclick="toggleBalance()">🐋</div>
+  </div>
+
+  <div id="miniCompanion" class="mini-companion" onclick="toggleLeft()">
+    <svg width="66" height="62" viewBox="0 0 66 62" fill="none">
+      <path d="M54 35 C61 31, 64 25, 62 21 C59 24, 56 26, 53 28 C57 29, 61 33, 63 38 C59 39, 55 38, 52 36 Z" fill="#60a5fa" stroke="#203170" stroke-width="2.4"/>
+      <path d="M10 34 C10 19, 22 11, 35 12 C48 13, 55 22, 55 34 C55 46, 46 53, 32 53 C18 53, 10 46, 10 34 Z" fill="#93c5fd" stroke="#203170" stroke-width="2.6"/>
+      <path d="M15 41 C20 48, 36 50, 46 44 C38 45, 24 44, 15 41 Z" fill="#eff6ff"/>
+      <ellipse cx="18" cy="36" rx="3.4" ry="2" fill="#fda4af" opacity="0.85"/>
+      <ellipse cx="42" cy="36" rx="3.4" ry="2" fill="#fda4af" opacity="0.85"/>
+      <circle cx="24" cy="30" r="3" fill="#203170"/><circle cx="36" cy="30" r="3" fill="#203170"/>
+      <path d="M27 35 Q30 38 33 35" stroke="#203170" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+  </div>
+
+  <div id="hudWrap" class="hud-bubble-wrap" aria-live="polite">
+    <div id="hudDrawer" class="hud-drawer">
+      <div class="tabs">
+        <button id="tabThought" class="tab active" onclick="switchTab('thought')">🧠 思考链</button>
+        <button id="tabSteps" class="tab" onclick="switchTab('steps')">🛠️ 干活记录 (<span id="stepNum">0</span>)</button>
+      </div>
+      <div id="thoughtPane" class="thought-box">小脑袋瓜还在蓄力中~</div>
+      <div id="stepsPane" style="display:none"></div>
+    </div>
+    <div class="hud-bubble">
+      <div class="hud-top">
+        <span id="hudBadge" class="hud-badge"><span id="hudDot" class="hud-dot"></span><span id="hudTag">💭 动脑筋</span></span>
+        <span id="hudMeta" class="hud-meta">第1步 · 00:00</span>
+      </div>
+      <button id="hudHeadline" class="hud-headline" onclick="toggleDrawer()">小脑瓜高速运转中，别催别催~</button>
+      <button id="hudThought" class="hud-thought" onclick="openThought()">💭 先看看用户要改哪块逻辑，确认别把旧配置弄坏…</button>
+    </div>
+    <div id="hudTail" class="hud-tail"><span class="t1"></span><span class="t2"></span></div>
+  </div>
+
+  <script>
+    const themes = {
+      thinking: ['💭 动脑筋', '#2563eb', '#eff6ff'],
+      running_tool: ['🔧 干活中', '#d97706', '#fffbeb'],
+      waiting_approval: ['🙋 求批准', '#ea580c', '#fff7ed'],
+      streaming: ['✍️ 码字中', '#059669', '#ecfdf5'],
+      done: ['✨ 搞定啦', '#16a34a', '#f0fdf4'],
+    };
+    let stepCount = 1, startAt = Date.now(), active = true, hasExternalWidget = true, isLeft = false;
+    let thoughtFull = '先看看用户要改哪块逻辑，确认别把旧配置弄坏…';
+    const steps = [];
+
+    function syncPosition() {
+      const wrap = document.getElementById('hudWrap');
+      const tail = document.getElementById('hudTail');
+      wrap.classList.toggle('left', isLeft);
+      if (!hasExternalWidget) {
+        tail.classList.remove('hidden');
+        wrap.style.left = (isLeft ? 18 : window.innerWidth - 264 - 18) + 'px';
+        wrap.style.bottom = '80px';
+        return;
+      }
+      const sprite = document.getElementById('whaleSprite').getBoundingClientRect();
+      const balEl = document.getElementById('balanceBubble');
+      if (balEl.classList.contains('open')) {
+        const bRect = balEl.getBoundingClientRect();
+        tail.classList.add('hidden');
+        wrap.style.left = (isLeft ? bRect.left : Math.max(12, bRect.right - 264)) + 'px';
+        wrap.style.bottom = (window.innerHeight - bRect.top + 18) + 'px';
+      } else {
+        tail.classList.remove('hidden');
+        wrap.style.left = (isLeft ? sprite.left + 8 : Math.max(12, sprite.right - 264 - 6)) + 'px';
+        wrap.style.bottom = (window.innerHeight - sprite.top + 4) + 'px';
+      }
+    }
+
+    function renderMeta() {
+      const sec = Math.floor((Date.now() - startAt) / 1000);
+      document.getElementById('hudMeta').textContent = `第${stepCount}步 · ${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`;
+      document.getElementById('stepNum').textContent = String(steps.length);
+      document.getElementById('thoughtPane').textContent = thoughtFull;
+      document.getElementById('stepsPane').innerHTML = steps.slice().reverse().map(s =>
+        `<div style="margin-top:5px;color:#334155">${s.done ? '✓' : '●'} ${s.label}</div>`
+      ).join('') || '<div style="color:#64748b">这轮还没掏出工具呢~</div>';
+    }
+
+    function setPhase(phase, text, thought) {
+      const [tag, color, bg] = themes[phase];
+      document.getElementById('hudTag').textContent = tag;
+      document.getElementById('hudBadge').style.color = color;
+      document.getElementById('hudBadge').style.background = bg;
+      document.getElementById('hudDot').style.background = color;
+      document.getElementById('hudHeadline').textContent = text;
+      if (thought) {
+        thoughtFull += '\n' + thought;
+        document.getElementById('hudThought').textContent = '💭 ' + thought;
+      }
+      active = phase !== 'done';
+      if (phase === 'done') steps.forEach(s => s.done = true);
+      renderMeta(); syncPosition();
+    }
+
+    function addTool(label, thought) {
+      steps.forEach(s => s.done = true);
+      stepCount++;
+      steps.push({ label, done: false });
+      setPhase('running_tool', label, thought);
+    }
+
+    function switchTab(tab) {
+      document.getElementById('tabThought').classList.toggle('active', tab === 'thought');
+      document.getElementById('tabSteps').classList.toggle('active', tab === 'steps');
+      document.getElementById('thoughtPane').style.display = tab === 'thought' ? 'block' : 'none';
+      document.getElementById('stepsPane').style.display = tab === 'steps' ? 'block' : 'none';
+    }
+    function toggleDrawer() { document.getElementById('hudDrawer').classList.toggle('open'); }
+    function openThought() { switchTab('thought'); document.getElementById('hudDrawer').classList.add('open'); }
+    function toggleBalance() { document.getElementById('balanceBubble').classList.toggle('open'); syncPosition(); }
+    function toggleLeft() {
+      isLeft = !isLeft;
+      document.getElementById('whaleRoot').classList.toggle('dshwv-left', isLeft);
+      document.getElementById('miniCompanion').classList.toggle('left', isLeft);
+      setTimeout(syncPosition, 250); syncPosition();
+    }
+    function toggleWidgetPresence() {
+      hasExternalWidget = !hasExternalWidget;
+      document.getElementById('whaleRoot').classList.toggle('hidden', !hasExternalWidget);
+      document.getElementById('miniCompanion').classList.toggle('visible', !hasExternalWidget);
+      syncPosition();
+    }
+
+    function runDemo() {
+      stepCount = 1; startAt = Date.now(); steps.length = 0; thoughtFull = '让我先拆解一下这个需求，看看需要动哪些文件~';
+      setPhase('thinking', '托腮认真盘算下一步咋干！', '先检查插件入口的事件监听，确认工具调用都能抓到。');
+      setTimeout(() => addTool('翻开 index.ts 瞅两眼~', '定位到 session/event 的双参数回调位置，准备检查字段。'), 1500);
+      setTimeout(() => addTool('拿起小画笔改写 WhaleThoughtBubble.tsx~', '把思考链预览条和双标签抽屉加上，保持气泡小巧不挡视线。'), 3200);
+      setTimeout(() => addTool('小手一挥，正在跑 pnpm test~', '跑一下单元测试，确认所有状态流转都稳稳通过！'), 5000);
+      setTimeout(() => setPhase('streaming', '灵感爆棚！正在疯狂码字回复~', '测试全绿啦，整理一份简洁好懂的说明回复给老大~'), 6800);
+      setTimeout(() => setPhase('done', '大功告成！快来夸夸我~ ✨', '全部搞定，坐等下一轮任务！'), 8500);
+    }
+
+    window.addEventListener('resize', syncPosition);
+    setInterval(() => { if (active) renderMeta(); }, 1000);
+    syncPosition(); renderMeta();
+  </script>
+</body>
+</html>

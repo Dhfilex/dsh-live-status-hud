@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Live Activity & Thought Bubble HUD",
+    "description": "Floating comic thought bubble for DeepSeek Harness displaying live tool activity, translated chain-of-thought, and persistent run history.",
+    "detail": "docs/DETAIL.md"
+  }
+}

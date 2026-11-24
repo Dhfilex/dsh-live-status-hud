@@ -1,0 +1,33 @@
+# DeepSeek Harness (dsh) profile bundle patch for dsh-live-status-hud
+# Installed automatically via `dsh plugin --profile web add <package-or-path>`
+
+- insert:
+    - id: live-status-hud
+      name: dsh-live-status-hud
+      config:
+        locale: zh-CN
+        # persona: 'playful'（可爱俏皮风格）或 'concise'（简洁专业风格）
+        persona: playful
+        # 是否在气泡内实时展示模型思考链（默认自动转中文）
+        showThoughtChain: true
+        # 空闲没在工作时是否彻底隐藏：false=保留并在空闲一段时间后自动收缩成 💭 小圆标
+        hideWhenIdle: false
+        # 无工作状态持续多久后自动收缩成右下角 💭 小圆标（毫秒，默认 12000 即 12 秒）
+        idleAutoMinimizeMs: 12000
+        stallThresholdMs: 30000
+        # 单轮最多保留的工具干活记录条数（已从 6 条放宽至 50 条）
+        maxRecentSteps: 50
+        # 每个会话最多归档的历史任务轮数
+        maxHistoryRuns: 15
+        defaultPosition: bottom-right
+        bubbleTheme: whale-comic
+        whaleAdapter:
+          enabled: true
+          conflictStrategy: stack
+          # customSelector: '.dshwv-img'
+        # 可选：AI 实时命令总结开关（默认关闭，零额外 Token；也可在气泡抽屉内一键开关）
+        aiSummary:
+          enabled: false
+          baseUrl: https://api.deepseek.com/v1
+          model: deepseek-chat
+          # apiKey: ''  # 留空时自动读取系统环境变量 DEEPSEEK_API_KEY
