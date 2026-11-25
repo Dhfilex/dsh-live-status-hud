@@ -1,4 +1,4 @@
-# dsh-live-status-hud v1.0.1
+# dsh-live-status-hud v1.0.4
 
 面向 [DeepSeek Harness (dsh `>=0.2.0-rc.1 <0.3.0-0`)](https://github.com/deepseek-ai/deepseek-harness) 的**实时任务状态 + 思考链 + 历史记录**漫画气泡插件，支持 Web 版与官方桌面端。
 

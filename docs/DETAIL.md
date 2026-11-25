@@ -1,4 +1,4 @@
-# dsh-live-status-hud 详细说明（v1.0.1）
+# dsh-live-status-hud 详细说明（v1.0.4）
 
 ## DSH 0.2.2-rc.3+ 兼容修复清单
 

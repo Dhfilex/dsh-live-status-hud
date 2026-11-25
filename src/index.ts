@@ -210,7 +210,7 @@ export function apply(ctx: Context, rawConfig?: Partial<LiveHudConfig>): void {
         const snap = buildSnapshot(lastActiveSessionId).status;
         sendJson(res, {
           ok: true,
-          version: '1.0.1',
+          version: '1.0.4',
           lastActiveSessionId: lastActiveSessionId ?? null,
           recentRawEventTypes,
           summary: snap
